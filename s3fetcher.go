@@ -1,4 +1,4 @@
-package minipi
+package main
 
 import "log"
 
