@@ -1,0 +1,8 @@
+webconfigs:
+  port: 8080
+  basepath: /
+  localfiledirectory: /Users/miguel/cm/configs/
+s3configs:
+  accesskey: "134344565452"
+  secretkey: 324367565w/34646763/4243647/24
+  bucketname: pakage
