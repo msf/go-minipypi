@@ -49,6 +49,6 @@ func main() {
 
 	log.Printf("config: %v\n", cfg)
 
-	fetcher := S3fetcher(cfg.S3configs)
+	fetcher := NewS3Fetcher(cfg.S3configs)
 	WebServer(cfg.WebConfigs, fetcher)
 }

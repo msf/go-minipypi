@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -37,18 +36,42 @@ func handleRequest(w http.ResponseWriter, req *http.Request) {
 
 	path := req.URL.EscapedPath()
 	if strings.HasSuffix(path, "/") {
-		handleDirListing(w,
-			webServerConfigs.LocalFileDirectory+path)
+		handleS3DirListing(w, path)
 	} else {
+		handleS3DirListing(w, path)
+		return
 		// must be file, lets find it.
-		handleServeFile(w, webServerConfigs.LocalFileDirectory+path)
+		handleServeS3File(w, path)
 	}
 }
 
-func handleServeFile(w http.ResponseWriter, path string) {
-	log.Println("FILE", path)
+func handleServeS3File(w http.ResponseWriter, key string) {
+	log.Println("FILE", key)
 	start := time.Now()
 
+	s3file, err := fetcher.GetFile(key)
+	if err != nil {
+		http.Error(w,
+			fmt.Sprintf("no read file: %v, %v", key, err),
+			http.StatusNotFound)
+		return
+	}
+	log.Printf("fetcher took: %.3f secs, %v Kb\n",
+		time.Since(start).Seconds(), len(s3file.Payload))
+
+	nbytes, err := w.Write(s3file.Payload)
+	if err != nil {
+		log.Printf("Copy bombed after %v bytes, err:%v", nbytes, err)
+	}
+	elapsed := time.Since(start)
+	log.Printf("Served file: %v, size: %v, took: %.3f secs",
+		key, nbytes, elapsed.Seconds())
+	return
+}
+
+func handleServeFileLocal(w http.ResponseWriter, path string) {
+	log.Println("FILE", path)
+	start := time.Now()
 	file, err := os.Open(path)
 	if err != nil {
 		http.Error(w,
@@ -56,6 +79,7 @@ func handleServeFile(w http.ResponseWriter, path string) {
 			http.StatusNotFound)
 		return
 	}
+	log.Printf("fetcher took: %.3f secs\n", time.Since(start).Seconds())
 
 	nbytes, err := io.Copy(w, file)
 	if err != nil {
@@ -63,15 +87,20 @@ func handleServeFile(w http.ResponseWriter, path string) {
 	}
 	elapsed := time.Since(start)
 	log.Printf("Served file: %v, size: %v, took: %.3f secs",
-		path, nbytes, elapsed)
+		path, nbytes, elapsed.Seconds())
 	return
 }
 
-func handleDirListing(w http.ResponseWriter, path string) {
+type DirListEntry struct {
+	Name, LastModified string
+	SizeKb             int64
+}
+
+func handleS3DirListing(w http.ResponseWriter, path string) {
 	log.Println("DirList", path)
 	start := time.Now()
 
-	fileList, err := ioutil.ReadDir(path)
+	fileList, err := fetcher.ListBucket(path)
 	if err != nil {
 		http.Error(w,
 			fmt.Sprintf("Can't list dir: %v, %v", path, err),
@@ -79,27 +108,15 @@ func handleDirListing(w http.ResponseWriter, path string) {
 		return
 	}
 
-	type Result struct {
-		Name, Date string
-		SizeKb     int64
-	}
-
-	var results []Result
-	for _, r := range fileList {
-		results = append(results, Result{
-			Name:   r.Name(),
-			Date:   r.ModTime().Format(time.RFC3339),
-			SizeKb: r.Size() / 1024})
-	}
-
 	type templateData struct {
-		Results []Result
+		Results []DirListEntry
 		Elapsed time.Duration
 		BaseDir string
 	}
 
+	log.Println("Got from fetcher: %v", fileList)
 	if err := resultsTemplate.Execute(w, templateData{
-		Results: results,
+		Results: fileList,
 		Elapsed: time.Since(start),
 		BaseDir: webServerConfigs.BasePath,
 	}); err != nil {
@@ -116,7 +133,7 @@ var resultsTemplate = template.Must(template.New("results").Parse(`
 <body>
   <ol>
   {{range .Results}}
-  <li>{{.Date}} - {{.SizeKb}} Kb - <a href="http://localhost:8080/{{.Name}}">{{.Name}}</a></li>
+  <li>{{.LastModified}} - {{.SizeKb}} Kb - <a href="http://localhost:8080/{{.Name}}">{{.Name}}</a></li>
   {{end}}
   </ol>
   <p>{{len .Results}} results in {{.Elapsed}}</p>
