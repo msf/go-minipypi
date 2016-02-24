@@ -30,7 +30,7 @@ func WebServer(cfg WebServerConfigs, fileFetcher S3fetcher) {
 }
 
 func handleRequest(w http.ResponseWriter, req *http.Request) {
-	log.Println("serving", req.URL)
+	log.Println("******************* serving", req.URL)
 
 	path := req.URL.EscapedPath()
 	if strings.HasSuffix(path, "/") {
@@ -39,6 +39,8 @@ func handleRequest(w http.ResponseWriter, req *http.Request) {
 		// must be file, lets find it.
 		handleServeS3File(w, path)
 	}
+	log.Println("******************* DONE")
+
 }
 
 func handleServeS3File(w http.ResponseWriter, key string) {
