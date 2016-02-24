@@ -10,13 +10,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
+// S3configs holds basic cfg data required by S3fetcher
 type S3configs struct {
-	AccessKey  string
-	SecretKey  string
 	BucketName string
 	s3svc      *s3.S3
 }
 
+// S3File contains the payload of an S3File (or key) and other important fields.
 type S3File struct {
 	Payload    []byte
 	Etag       string
@@ -107,7 +107,7 @@ func (s3cfg S3configs) ListBucket(path string) ([]DirListEntry, error) {
 	return items.keyList, nil
 }
 
-func (list s3KeyList) processPage(page *s3.ListObjectsOutput, more bool) bool {
+func (list *s3KeyList) processPage(page *s3.ListObjectsOutput, more bool) bool {
 	log.Printf("ProcessPage[%v] <- %v ", len(list.keyList), len(page.Contents))
 
 	for _, obj := range page.Contents {
