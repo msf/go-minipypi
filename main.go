@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// Configs used by this package.
 type Configs struct {
 	WebConfigs WebServerConfigs
 	S3configs  S3configs
@@ -17,12 +18,10 @@ func genConfig(filename string) {
 	cfg := &Configs{
 		WebConfigs: WebServerConfigs{
 			BasePath:           "",
-			LocalFileDirectory: "/Users/miguel/cm/configs/",
+			LocalFileDirectory: "/tmp/packages/",
 			Port:               8080,
 		},
 		S3configs: S3configs{
-			AccessKey:  "134344565452",
-			SecretKey:  "324367565w/34646763/4243647/24",
 			BucketName: "pakage",
 		},
 	}
@@ -37,11 +36,10 @@ func main() {
 	var configFile = flag.String("config", "config.yml", "config file")
 	flag.Parse()
 
-	genConfig("cfg.yml")
 	data, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		genConfig("cfg.yml")
-		panic("failed to read config file")
+		panic("failed to read config file, see example: cfg.yml")
 	}
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		panic("failed to parse config")

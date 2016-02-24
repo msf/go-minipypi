@@ -1,6 +1,6 @@
 webconfigs:
   port: 8080
   basepath: /
-  localfiledirectory: /Users/miguel/cm/configs/
+  localfiledirectory: /tmp/packages
 s3configs:
   bucketname: citymapper-packages
