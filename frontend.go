@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -38,8 +36,6 @@ func handleRequest(w http.ResponseWriter, req *http.Request) {
 	if strings.HasSuffix(path, "/") {
 		handleS3DirListing(w, path)
 	} else {
-		handleS3DirListing(w, path)
-		return
 		// must be file, lets find it.
 		handleServeS3File(w, path)
 	}
@@ -49,11 +45,19 @@ func handleServeS3File(w http.ResponseWriter, key string) {
 	log.Println("FILE", key)
 	start := time.Now()
 
+	log.Printf("GetFile:%v", key)
+	pathParts := strings.Split(key, "/")
+	nparts := len(pathParts)
+	if nparts > 2 {
+		// requests can come in the form: /packagename/packagename-version-blblablabla.xx
+		// the real key in these cases is: /packagename-version-blablalbalbla.xx
+		key = "/" + pathParts[nparts-1]
+	}
 	s3file, err := fetcher.GetFile(key)
 	if err != nil {
-		http.Error(w,
-			fmt.Sprintf("no read file: %v, %v", key, err),
-			http.StatusNotFound)
+		desc := fmt.Sprintf("GetFile failed: %v, %v", key, err)
+		log.Println(desc)
+		http.Error(w, desc, http.StatusNotFound)
 		return
 	}
 	log.Printf("fetcher took: %.3f secs, %v Kb\n",
@@ -61,33 +65,16 @@ func handleServeS3File(w http.ResponseWriter, key string) {
 
 	nbytes, err := w.Write(s3file.Payload)
 	if err != nil {
-		log.Printf("Copy bombed after %v bytes, err:%v", nbytes, err)
+		desc := fmt.Sprintf(
+			"GetFile(%v) copy to network bombed after %v bytes, %v secs, err:%v",
+			key, nbytes, time.Since(start).Seconds(), err)
+		log.Println(desc)
+		http.Error(w, desc, http.StatusNotFound)
+		return
 	}
 	elapsed := time.Since(start)
 	log.Printf("Served file: %v, size: %v, took: %.3f secs",
 		key, nbytes, elapsed.Seconds())
-	return
-}
-
-func handleServeFileLocal(w http.ResponseWriter, path string) {
-	log.Println("FILE", path)
-	start := time.Now()
-	file, err := os.Open(path)
-	if err != nil {
-		http.Error(w,
-			fmt.Sprintf("no read file: %v, %v", path, err),
-			http.StatusNotFound)
-		return
-	}
-	log.Printf("fetcher took: %.3f secs\n", time.Since(start).Seconds())
-
-	nbytes, err := io.Copy(w, file)
-	if err != nil {
-		log.Printf("Copy bombed after %v bytes, err:%v", nbytes, err)
-	}
-	elapsed := time.Since(start)
-	log.Printf("Served file: %v, size: %v, took: %.3f secs",
-		path, nbytes, elapsed.Seconds())
 	return
 }
 
@@ -102,9 +89,8 @@ func handleS3DirListing(w http.ResponseWriter, path string) {
 
 	fileList, err := fetcher.ListBucket(path)
 	if err != nil {
-		http.Error(w,
-			fmt.Sprintf("Can't list dir: %v, %v", path, err),
-			http.StatusBadRequest)
+		desc := fmt.Sprintf("Can't list dir: %v, %v", path, err)
+		http.Error(w, desc, http.StatusBadRequest)
 		return
 	}
 
@@ -114,8 +100,8 @@ func handleS3DirListing(w http.ResponseWriter, path string) {
 		BaseDir string
 	}
 
-	log.Println("Got from fetcher: %v", fileList)
-	if err := resultsTemplate.Execute(w, templateData{
+	log.Printf("DirList, Got from fetcher: %v in %.3f secs", len(fileList), time.Since(start).Seconds())
+	if err := pypiResultsTemplate.Execute(w, templateData{
 		Results: fileList,
 		Elapsed: time.Since(start),
 		BaseDir: webServerConfigs.BasePath,
@@ -124,9 +110,21 @@ func handleS3DirListing(w http.ResponseWriter, path string) {
 		log.Print(desc)
 		http.Error(w, desc, http.StatusInternalServerError)
 	}
+	log.Printf("DirList:%v in %.3f secs", path, time.Since(start).Seconds())
 }
 
-// A Result contains the title and URL of a search result.
+// results just like a pypi server would return
+var pypiResultsTemplate = template.Must(template.New("results").Parse(`
+<html>
+<head/>
+<body>
+  {{range .Results}}
+  <a href="{{.Name}}">{{.Name}}</a>
+  {{end}}
+</body>
+</html>
+`))
+
 var resultsTemplate = template.Must(template.New("results").Parse(`
 <html>
 <head/>

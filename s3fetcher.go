@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -35,45 +36,21 @@ func NewS3Fetcher(cfg S3configs) S3fetcher {
 	svc := s3.New(session.New(aws.NewConfig().WithRegion(region)))
 	cfg.s3svc = svc
 
-	//	var params *s3.ListBucketsInput
-	//	ret, err := svc.ListBuckets(params)
-	//	if err != nil {
-	//		log.Fatalln("ListBuckets failed", err)
-	//	}
-	//	log.Println(ret)
-	//
-	//	found := false
-	//	for _, bkt := range ret.Buckets {
-	//		log.Println(bkt.Name)
-	//		if *bkt.Name == cfg.BucketName {
-	//			log.Println("WE FOUND OUR BUCKET!!\n\n")
-	//			found = true
-	//			break
-	//		}
-	//	}
-	//
-	//	if !found {
-	//		log.Fatal("No such bucket: %v", cfg.BucketName)
-	//	}
-	//
 	return cfg
 }
 
 func (s3cfg S3configs) GetFile(key string) (*S3File, error) {
-	log.Print("GetFile:%v", key)
 	res, err := s3cfg.s3svc.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s3cfg.BucketName),
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		log.Printf("GetFile failed,: %v", err)
 		return nil, err
 	}
 
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Printf("Get ReadAll boty failed: %v", err)
 		return nil, err
 	}
 	ret := &S3File{Payload: data, Etag: *res.ETag, Key: key, BucketName: s3cfg.BucketName}
@@ -87,23 +64,19 @@ type s3KeyList struct {
 
 func (s3cfg S3configs) ListBucket(path string) ([]DirListEntry, error) {
 
-	prefix := path[1:len(path)] // remove initial /
+	prefix := path[1:]                       // remove initial /
+	prefix = strings.TrimSuffix(prefix, "/") // and the last one
 	log.Println("ListBucket", prefix)
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(s3cfg.BucketName),
 		Prefix: aws.String(prefix),
-		//		MaxKeys: aws.Int64(1000),
 	}
-	log.Println(params)
 	items := &s3KeyList{keyList: make([]DirListEntry, 0)}
 
 	if err := s3cfg.s3svc.ListObjectsPages(params, items.processPage); err != nil {
-		log.Printf("ListObjectsPages faile: %v", err)
 		return nil, err
 	}
 
-	log.Println("ListBucket END")
-	log.Println("ListBucket END", len(items.keyList))
 	return items.keyList, nil
 }
 
@@ -118,7 +91,6 @@ func (list *s3KeyList) processPage(page *s3.ListObjectsOutput, more bool) bool {
 		}
 		list.keyList = append(list.keyList, entry)
 	}
-	log.Println("page END", len(list.keyList))
 
 	return true
 }
