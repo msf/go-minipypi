@@ -1,5 +1,6 @@
 webconfigs:
   port: 8080
+  host: localhost
   basepath: "/"
 s3configs:
   bucketname: citymapper-packages

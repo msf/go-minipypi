@@ -18,6 +18,7 @@ type Configs struct {
 func genConfig(filename string) {
 	cfg := &Configs{
 		WebConfigs: WebServerConfigs{
+			Host:     "localhost",
 			BasePath: "/",
 			Port:     8080,
 		},

@@ -10,8 +10,9 @@ import (
 	"time"
 )
 
-// Basic webserver configs for this server
+// WebServerConfigs holds configs for this server
 type WebServerConfigs struct {
+	Host     string
 	Port     int
 	BasePath string
 }
@@ -31,7 +32,7 @@ func WebServer(cfg WebServerConfigs, fileFetcher FileFetcher) {
 	fetcher = fileFetcher
 	webServerConfigs = cfg
 	http.HandleFunc(cfg.BasePath, handleRequest)
-	hostPortStr := fmt.Sprintf(":%v", cfg.Port)
+	hostPortStr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)
 	log.Printf("serving on HTTP://%v/%v\n", hostPortStr, cfg.BasePath)
 	log.Fatal(http.ListenAndServe(hostPortStr, nil))
 }
