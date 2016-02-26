@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"html/template"
 	"log"
 	"net/http"
@@ -11,15 +12,21 @@ import (
 
 // Basic webserver configs for this server
 type WebServerConfigs struct {
-	Port               int
-	BasePath           string
-	LocalFileDirectory string
+	Port     int
+	BasePath string
 }
 
-var fetcher S3fetcher
+// FileFetcher interface that the frontend uses to serve requests.
+type FileFetcher interface {
+	GetFile(path string) (*S3File, error)
+	ListBucket(bucketName string) ([]DirListEntry, error)
+}
+
+var fetcher FileFetcher
 var webServerConfigs WebServerConfigs
 
-func WebServer(cfg WebServerConfigs, fileFetcher S3fetcher) {
+// WebServer is a proxy pypi server that handles HTTP requests by leveraging any implementation of FileFetcher to do the grunt work.
+func WebServer(cfg WebServerConfigs, fileFetcher FileFetcher) {
 
 	fetcher = fileFetcher
 	webServerConfigs = cfg
@@ -30,24 +37,20 @@ func WebServer(cfg WebServerConfigs, fileFetcher S3fetcher) {
 }
 
 func handleRequest(w http.ResponseWriter, req *http.Request) {
-	log.Println("******************* serving", req.URL)
 
-	path := req.URL.EscapedPath()
+	path := html.EscapeString(req.URL.Path)
 	if strings.HasSuffix(path, "/") {
 		handleS3DirListing(w, path)
 	} else {
 		// must be file, lets find it.
 		handleServeS3File(w, path)
 	}
-	log.Println("******************* DONE")
-
 }
 
-func handleServeS3File(w http.ResponseWriter, key string) {
-	log.Println("FILE", key)
+func handleServeS3File(w http.ResponseWriter, path string) {
 	start := time.Now()
+	key := path
 
-	log.Printf("GetFile:%v", key)
 	pathParts := strings.Split(key, "/")
 	nparts := len(pathParts)
 	if nparts > 2 {
@@ -57,26 +60,25 @@ func handleServeS3File(w http.ResponseWriter, key string) {
 	}
 	s3file, err := fetcher.GetFile(key)
 	if err != nil {
-		desc := fmt.Sprintf("GetFile failed: %v, %v", key, err)
+		desc := fmt.Sprintf("\"GET %v\" 404 - time: %.3f secs, error: %v",
+			key, time.Since(start).Seconds(), err)
 		log.Println(desc)
 		http.Error(w, desc, http.StatusNotFound)
 		return
 	}
-	log.Printf("fetcher took: %.3f secs, %v Kb\n",
-		time.Since(start).Seconds(), len(s3file.Payload))
+	timeFetching := time.Since(start)
 
 	nbytes, err := w.Write(s3file.Payload)
 	if err != nil {
-		desc := fmt.Sprintf(
-			"GetFile(%v) copy to network bombed after %v bytes, %v secs, err:%v",
-			key, nbytes, time.Since(start).Seconds(), err)
+		desc := fmt.Sprintf("\"GET %v\" 404 - time: %.3f secs, network write error: %v",
+			key, time.Since(start).Seconds(), err)
 		log.Println(desc)
 		http.Error(w, desc, http.StatusNotFound)
 		return
 	}
 	elapsed := time.Since(start)
-	log.Printf("Served file: %v, size: %v, took: %.3f secs",
-		key, nbytes, elapsed.Seconds())
+	log.Printf("\"GET %v\" 200 - size: %v, fetch: %.3f, total: %.3f secs",
+		path, nbytes, timeFetching.Seconds(), elapsed.Seconds())
 	return
 }
 
@@ -86,12 +88,11 @@ type DirListEntry struct {
 }
 
 func handleS3DirListing(w http.ResponseWriter, path string) {
-	log.Println("DirList", path)
 	start := time.Now()
 
 	fileList, err := fetcher.ListBucket(path)
 	if err != nil {
-		desc := fmt.Sprintf("Can't list dir: %v, %v", path, err)
+		desc := fmt.Sprintf("\"DIRLIST %v\" 400 - err: %v", path, err)
 		http.Error(w, desc, http.StatusBadRequest)
 		return
 	}
@@ -102,17 +103,18 @@ func handleS3DirListing(w http.ResponseWriter, path string) {
 		BaseDir string
 	}
 
-	log.Printf("DirList, Got from fetcher: %v in %.3f secs", len(fileList), time.Since(start).Seconds())
 	if err := pypiResultsTemplate.Execute(w, templateData{
 		Results: fileList,
 		Elapsed: time.Since(start),
 		BaseDir: webServerConfigs.BasePath,
 	}); err != nil {
-		desc := fmt.Sprintf("templating failed: %v", err)
+		desc := fmt.Sprintf("\"DIRLIST %v\" 404 - time: %.3f secs, template write error: %v",
+			path, time.Since(start).Seconds(), err)
 		log.Print(desc)
 		http.Error(w, desc, http.StatusInternalServerError)
 	}
-	log.Printf("DirList:%v in %.3f secs", path, time.Since(start).Seconds())
+	log.Printf("\"DIRLIST %v\" 200 - items:%v, time: %.3f secs",
+		path, len(fileList), time.Since(start).Seconds())
 }
 
 // results just like a pypi server would return
