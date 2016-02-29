@@ -37,18 +37,14 @@ func (config CacheConfigs) GetFile(key string) (*S3File, error) {
 	return config.realFetcher.GetFile(key)
 }
 
+// ListBucket caches results from realFetcher and also garbage collects the cache when required.
 func (config CacheConfigs) ListBucket(path string) ([]DirListEntry, error) {
 	now := time.Now().Unix()
-	cachedResult, cacheHit := config.cachedListBucket[path]
-	if cacheHit && now > cachedResult.expirationUnixTime {
-		return cachedResult.result, nil
-	} else if cacheHit {
-		log.Printf("cache: expired entry[%v], deleting", path)
-		delete(config.cachedListBucket, path)
-	}
 
-	if config.shouldRunGC(now) {
-		config.garbageCollectCache()
+	result := config.getFromCache(path, now)
+	if result != nil {
+		// cache hit
+		return result, nil
 	}
 
 	realResult, err := config.realFetcher.ListBucket(path)
@@ -62,6 +58,21 @@ func (config CacheConfigs) ListBucket(path string) ([]DirListEntry, error) {
 	}
 
 	return realResult, nil
+}
+
+func (config CacheConfigs) getFromCache(key string, unixTime int64) []DirListEntry {
+	cachedResult, cacheHit := config.cachedListBucket[key]
+	if cacheHit && unixTime < cachedResult.expirationUnixTime {
+		return cachedResult.result
+	} else if cacheHit {
+		log.Printf("cache: expired entry[%v], deleting", key)
+		delete(config.cachedListBucket, key)
+	}
+
+	if config.shouldRunGC(unixTime) {
+		config.garbageCollectCache()
+	}
+	return nil
 }
 
 func (config CacheConfigs) shouldRunGC(unixTime int64) bool {
