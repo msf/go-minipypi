@@ -11,8 +11,9 @@ import (
 
 // Configs used by this package.
 type Configs struct {
-	WebConfigs WebServerConfigs
-	S3configs  S3configs
+	WebConfigs   WebServerConfigs
+	CacheConfigs CacheConfigs
+	S3configs    S3configs
 }
 
 func genConfig(filename string) {
@@ -21,6 +22,9 @@ func genConfig(filename string) {
 			Host:     "localhost",
 			BasePath: "/",
 			Port:     8080,
+		},
+		CacheConfigs: CacheConfigs{
+			ExpireSecs: 120,
 		},
 		S3configs: S3configs{
 			BucketName:      "bucket-name",
@@ -58,7 +62,8 @@ func main() {
 	}
 
 	fetcher := NewS3Fetcher(cfg.S3configs)
-	WebServer(cfg.WebConfigs, fetcher)
+	cache := NewCachedFetcher(cfg.CacheConfigs, fetcher)
+	WebServer(cfg.WebConfigs, cache)
 }
 
 func isValidConfig(config Configs) bool {

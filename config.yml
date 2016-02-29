@@ -1,7 +1,9 @@
 webconfigs:
-  port: 8080
   host: localhost
-  basepath: "/"
+  port: 8080
+  basepath: /
+cacheconfigs:
+  expiresecs: 120
 s3configs:
   bucketname: citymapper-packages
   credentialsfile: aws_credentials.ini
