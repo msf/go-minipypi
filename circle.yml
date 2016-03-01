@@ -1,5 +1,6 @@
 test:
     post:
+        - strip go-minipypi
         - gzip go-minipypi
         - mv -f go-minipypi.gz bin/go-minipypi-`uname -s`-`uname -m`.gz
 general:
