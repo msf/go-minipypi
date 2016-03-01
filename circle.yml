@@ -1,7 +1,7 @@
+test:
+    post:
+        - gzip go-minipypi
+        - mv -f go-minipypi.gz bin/go-minipypi-`uname -s`-`uname -m`.gz
 general:
-    test:
-        post:
-            - gzip go-minipypi
-            - mv -f go-minipypi.gz bin/go-minipypi-`uname -s`-`uname -m`.gz
     artifacts:
         - "bin/"
