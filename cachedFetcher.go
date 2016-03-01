@@ -65,7 +65,8 @@ func (config CacheConfigs) getFromCache(key string, unixTime int64) []DirListEnt
 	if cacheHit && unixTime < cachedResult.expirationUnixTime {
 		return cachedResult.result
 	} else if cacheHit {
-		log.Printf("cache: expired entry[%v], deleting", key)
+		log.Printf("cache: deleting entry[%v] (staleSecs: %v) ",
+			key, unixTime-cachedResult.expirationUnixTime)
 		delete(config.cachedListBucket, key)
 	}
 
@@ -83,8 +84,9 @@ func (config CacheConfigs) shouldRunGC(unixTime int64) bool {
 func (config CacheConfigs) garbageCollectCache() {
 	now := time.Now().Unix()
 	for path, cachedResult := range config.cachedListBucket {
-		if now > cachedResult.expirationUnixTime {
-			log.Printf("cache: expired entry[%v], deleting", path)
+		staleSecs := now - cachedResult.expirationUnixTime
+		if staleSecs > 0 {
+			log.Printf("GCcache: deleting entry[%v] (staleSecs: %v)", path, staleSecs)
 			delete(config.cachedListBucket, path)
 		}
 	}
