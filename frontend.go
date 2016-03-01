@@ -41,7 +41,7 @@ func handleRequest(w http.ResponseWriter, req *http.Request) {
 
 	path := html.EscapeString(req.URL.Path)
 	if strings.HasSuffix(path, "/") {
-		handleS3DirListing(w, path)
+		handleDirListing(w, path)
 	} else {
 		// must be file, lets find it.
 		handleServeS3File(w, path)
@@ -88,10 +88,10 @@ type DirListEntry struct {
 	SizeKb             int64
 }
 
-func handleS3DirListing(w http.ResponseWriter, path string) {
+func handleDirListing(w http.ResponseWriter, path string) {
 	start := time.Now()
 
-	fileList, err := fetcher.ListBucket(path)
+	fileList, err := handlePypiDirList(fetcher, path)
 	if err != nil {
 		desc := fmt.Sprintf("\"DIRLIST %v\" 400 - err: %v", path, err)
 		http.Error(w, desc, http.StatusBadRequest)

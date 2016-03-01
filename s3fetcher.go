@@ -2,7 +2,6 @@ package main
 
 import (
 	"io/ioutil"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -61,11 +60,9 @@ func (s3cfg S3configs) GetFile(key string) (*S3File, error) {
 // ListBucket returns the contents of our preconfigured bucket that start with path
 func (s3cfg S3configs) ListBucket(path string) ([]DirListEntry, error) {
 
-	prefix := strings.TrimPrefix(path, "/")  // remove initial /
-	prefix = strings.TrimSuffix(prefix, "/") // and last one
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(s3cfg.BucketName),
-		Prefix: aws.String(prefix),
+		Prefix: aws.String(path),
 	}
 	items := &s3KeyList{keyList: make([]DirListEntry, 0)}
 
