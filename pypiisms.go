@@ -1,9 +1,6 @@
 package main
 
-import (
-	"log"
-	"strings"
-)
+import "strings"
 
 func normalizeFileName(filePath string) string {
 	return strings.Replace(strings.ToLower(filePath), "-", "_", -1)
@@ -14,41 +11,27 @@ func handlePypiDirList(fetcher FileFetcher, path string) ([]DirListEntry, error)
 
 	prefix := strings.TrimPrefix(path, "/")  // remove initial /
 	prefix = strings.TrimSuffix(prefix, "/") // and last one
-	fileList, err := fetcher.ListBucket(prefix)
+
+	// case-insensitive search, search for X* + x*
+	firstLetter := prefix[0:1]
+	lowerFiles, err := fetcher.ListBucket(strings.ToLower(firstLetter))
 	if err != nil {
-		return fileList, err
+		return lowerFiles, err
 	}
-	if len(fileList) > 0 {
-		log.Println("PypiDirList vanilla HIT")
-		return fileList, nil
+	upperFiles, err := fetcher.ListBucket(strings.ToUpper(firstLetter))
+	if err != nil {
+		return upperFiles, err
 	}
 
-	// lets try searching for normalized name
-	fileList, err = fetcher.ListBucket(normalizeFileName(prefix))
-	if err != nil {
-		return fileList, err
-	}
-	if len(fileList) > 0 {
-		log.Println("PypiDirList normalizeFileName HIT")
-		return fileList, nil
-	}
-
-	// no results, lets try normalizing bucket entry names
-	allFiles, err := fetcher.ListBucket("/")
-	if err != nil {
-		return allFiles, err
-	}
-
+	// now merge both and filter by normalized prefix comparison.
+	allFiles := append(lowerFiles, upperFiles...)
+	normalizedPrefix := normalizeFileName(prefix)
 	results := make([]DirListEntry, 0)
-	normalizedPath := normalizeFileName(path)
 	for _, entry := range allFiles {
 		fileName := normalizeFileName(entry.Name)
-		if strings.HasPrefix(fileName, normalizedPath) {
+		if strings.HasPrefix(fileName, normalizedPrefix) {
 			results = append(results, entry)
 		}
-	}
-	if len(results) > 0 {
-		log.Println("PypiDirList normalizedBucketEntries HIT")
 	}
 	return results, nil
 }
