@@ -43,14 +43,13 @@ func (s3cfg S3configs) GetFile(key string) (*FetchedFile, error) {
 	return ret, nil
 }
 
-// ListBucket returns the contents of our preconfigured bucket that start with path
+// ListDir returns the contents of our preconfigured bucket that start with path
 func (s3cfg S3configs) ListDir(path string) ([]ListDirEntry, error) {
 
 	params := &s3.ListObjectsInput{
 		Bucket: aws.String(s3cfg.BucketName),
 		Prefix: aws.String(path),
 	}
-	//	items := &s3KeyList{keyList: make([]ListDirEntry, 0)}
 
 	var items s3KeyList
 	if err := s3cfg.s3svc.ListObjectsPages(params, items.processPage); err != nil {

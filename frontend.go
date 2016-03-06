@@ -20,7 +20,7 @@ type WebServerConfigs struct {
 	fetcher FileFetcher
 }
 
-// WebServer is a proxy pypi server that handles HTTP requests by leveraging any implementation of FileFetcher to do the grunt work.
+// RunWebServer starts a proxy pypi server that handles HTTP requests by leveraging any implementation of FileFetcher to do the grunt work.
 func RunWebServer(cfg WebServerConfigs, fileFetcher FileFetcher) {
 
 	http.HandleFunc(cfg.BasePath, cfg.handleRequest)
