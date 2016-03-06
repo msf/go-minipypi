@@ -15,4 +15,4 @@ type testClock struct {
 	NowValue time.Time
 }
 
-func (testClock) Now() time.Time { return testClock.NowValue }
+func (clock testClock) Now() time.Time { return clock.NowValue }

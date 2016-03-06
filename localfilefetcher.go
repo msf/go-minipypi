@@ -1,32 +1,61 @@
 package main
 
 import (
-	"fmt"
-	"io"
-	"log"
-	"net/http"
 	"os"
-	"time"
+	"path/filepath"
 )
 
-func handleServeFileLocal(w http.ResponseWriter, path string) {
-	log.Println("FILE", path)
-	start := time.Now()
-	file, err := os.Open(path)
-	if err != nil {
-		http.Error(w,
-			fmt.Sprintf("no read file: %v, %v", path, err),
-			http.StatusNotFound)
-		return
-	}
-	log.Printf("fetcher took: %.3f secs\n", time.Since(start).Seconds())
+var _ FileFetcher = (*localFileFetcher)(nil)
 
-	nbytes, err := io.Copy(w, file)
-	if err != nil {
-		log.Printf("Copy bombed after %v bytes, err:%v", nbytes, err)
+type localFileFetcher struct {
+	localDirectory string
+}
+
+func NewLocalFileFetcher(localPath string) FileFetcher {
+	newFileFetcher := localFileFetcher{
+		localDirectory: localPath,
 	}
-	elapsed := time.Since(start)
-	log.Printf("Served file: %v, size: %v, took: %.3f secs",
-		path, nbytes, elapsed.Seconds())
-	return
+	return newFileFetcher
+}
+
+func (this localFileFetcher) GetFile(path string) (*FetchedFile, error) {
+	fullPath := filepath.Join(this.localDirectory, path)
+	f, err := os.Open(fullPath)
+	if err != nil {
+		return nil, err
+	}
+	file := &FetchedFile{
+		Payload:    f,
+		BucketName: this.localDirectory,
+		Key:        path,
+		Etag:       fullPath,
+	}
+	return file, nil
+}
+
+func (this localFileFetcher) ListDir(path string) ([]ListDirEntry, error) {
+	fullPath := filepath.Join(this.localDirectory, path)
+
+	var fileList fileList
+	if err := filepath.Walk(fullPath, fileList.processFile); err != nil {
+		return nil, err
+	}
+	return fileList.fList, nil
+}
+
+type fileList struct {
+	fList []ListDirEntry
+}
+
+func (list *fileList) processFile(filePath string, info os.FileInfo, err error) error {
+	if info.IsDir() {
+		return filepath.SkipDir
+	}
+	entry := ListDirEntry{
+		Name:         info.Name(),
+		LastModified: info.ModTime(),
+		SizeKb:       info.Size() / 1024,
+	}
+	list.fList = append(list.fList, entry)
+	return nil
 }
