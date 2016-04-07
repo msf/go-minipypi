@@ -18,20 +18,27 @@ Instalation
 	brew install go
 	```
 
-2. Setup your GOPATH and pull the code:
+2. Setup your GOPATH env variable and pull the code:
 
 	```
 	go get github.com/citymapper/go-minipypi
 	```
 
-3. Build the code:
+3. Install the requirements (if you haven't done so already)
+
+	```
+	go get github.com/aws/aws-sdk-go/aws
+	go get gopkg.in/yaml.v2
+	```
+
+4. Build the code:
 
 	```
 	cd $GOPATH/src/github.com/citymapper/go-minipypi
 	go build .
 	```
 
-4. Run it:
+5. Run it:
 
 	```
 	./go-minipypi
@@ -41,5 +48,3 @@ Notes:
 ------
 Its requires a config file, see config.yml.
 It requires a ini file that holds the AWS credentials. See aws_credentials.ini
-
-
