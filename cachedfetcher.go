@@ -35,6 +35,7 @@ func NewCachedFetcher(configs CacheConfigs, fileFetcher FileFetcher) FileFetcher
 	configs.cachedListBucket = make(map[string]CachedListBucketResult)
 	configs.cacheUnixTimeToGC = configs.clock.Now().Unix() + intervalSecsRunGC
 	configs.cacheLock = &sync.Mutex{}
+	go configs.runGarbageCollector()
 
 	return configs
 }
@@ -86,19 +87,27 @@ func (this CacheConfigs) getFromCache(key string, unixTime int64) []ListDirEntry
 		this.delCacheEntry(key)
 	}
 
-	if this.shouldRunGC(unixTime) {
-		this.garbageCollectCache()
-	}
 	return nil
+}
+
+func (this CacheConfigs) runGarbageCollector() {
+	// run garbage collection forever
+	for {
+		time.Sleep(intervalSecsRunGC)
+		totalEntries := len(this.cachedListBucket)
+		now := time.Now()
+		if totalEntries > 0 && this.shouldRunGC(now.Unix()) {
+			this.garbageCollectCache(now.Unix())
+			log.Printf("GarbageCollector: entries before: %v, took: %vs", totalEntries, time.Since(now))
+		}
+	}
 }
 
 func (this CacheConfigs) shouldRunGC(unixTime int64) bool {
 	return this.cacheUnixTimeToGC < unixTime
 }
 
-// TODO: this is O(N)
-func (this CacheConfigs) garbageCollectCache() {
-	now := time.Now().Unix()
+func (this CacheConfigs) garbageCollectCache(now int64) {
 	for path, cachedResult := range this.cachedListBucket {
 		staleSecs := now - cachedResult.expirationUnixTime
 		if staleSecs > 0 {
