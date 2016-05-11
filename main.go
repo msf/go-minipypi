@@ -63,7 +63,7 @@ func main() {
 
 	fetcher := NewS3Fetcher(cfg.S3configs)
 	cache := NewCachedFetcher(cfg.CacheConfigs, fetcher)
-	WebServer(cfg.WebConfigs, cache)
+	RunWebServer(cfg.WebConfigs, cache)
 }
 
 func isValidConfig(config Configs) bool {
