@@ -22,6 +22,7 @@ type WebServerConfigs struct {
 
 // RunWebServer starts a proxy pypi server that handles HTTP requests by leveraging any implementation of FileFetcher to do the grunt work.
 func RunWebServer(cfg WebServerConfigs, fileFetcher FileFetcher) {
+	cfg.fetcher = fileFetcher
 
 	http.HandleFunc(cfg.BasePath, cfg.handleRequest)
 	hostPortStr := fmt.Sprintf("%v:%v", cfg.Host, cfg.Port)

@@ -3,7 +3,9 @@ package main
 import "strings"
 
 func normalizeFileName(filePath string) string {
-	return strings.Replace(strings.ToLower(filePath), "-", "_", -1)
+	normalized := strings.Replace(strings.ToLower(filePath), "_", "-", -1)
+	normalized = strings.Replace(normalized, ".", "-", -1)
+	return normalized
 }
 
 func handlePypiFileNames(key string) string {
