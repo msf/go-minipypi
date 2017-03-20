@@ -1,6 +1,9 @@
 package main
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func normalizeFileName(filePath string) string {
 	normalized := strings.Replace(strings.ToLower(filePath), "_", "-", -1)
@@ -21,9 +24,12 @@ func handlePypiFileNames(key string) string {
 
 // handlePypiDirlist works around the fact that dirlistings are case insensitive so direct search for the path might fail
 func handlePypiListDir(fetcher FileFetcher, path string) ([]ListDirEntry, error) {
-
 	prefix := strings.TrimPrefix(path, "/")  // remove initial /
 	prefix = strings.TrimSuffix(prefix, "/") // and last one
+
+	if len(prefix) < 1 {
+		return nil, fmt.Errorf("expected a directory to list")
+	}
 
 	// case-insensitive search, search for X* + x*
 	firstLetter := prefix[0:1]
