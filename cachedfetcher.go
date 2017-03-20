@@ -92,13 +92,14 @@ func (this CacheConfigs) getFromCache(key string, unixTime int64) []ListDirEntry
 
 func (this CacheConfigs) runGarbageCollector() {
 	// run garbage collection forever
+	var interval = time.Duration(intervalSecsRunGC) * time.Second
 	for {
-		time.Sleep(intervalSecsRunGC)
+		time.Sleep(interval)
 		totalEntries := len(this.cachedListBucket)
 		now := time.Now()
 		if totalEntries > 0 && this.shouldRunGC(now.Unix()) {
 			this.garbageCollectCache(now.Unix())
-			log.Printf("GarbageCollector: entries before: %v, took: %vs", totalEntries, time.Since(now))
+			log.Printf("GarbageCollector: entries before: %v, took: %v", totalEntries, time.Since(now))
 		}
 	}
 }
