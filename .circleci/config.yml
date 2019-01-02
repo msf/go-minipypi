@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       - image: circleci/golang:1.11.4
-    working_directory: /go/src/github.com/citymapper/go-minipypi
+    working_directory: /home/circleci/citymapper/go-minipypi
     environment:
       TEST_RESULTS: &test_results /tmp/test-results
       OUTPUT_BIN: &output_bin /tmp/bin
