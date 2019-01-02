@@ -72,7 +72,6 @@ func isValidConfig(config Configs) bool {
 	valid = valid && config.WebConfigs.Port > 0
 	valid = valid && config.WebConfigs.Port < 65535
 	valid = valid && len(config.S3configs.BucketName) > 0
-	valid = valid && len(config.S3configs.CredentialsFile) > 0
 	valid = valid && len(config.S3configs.Region) > 0
 	return valid
 }
