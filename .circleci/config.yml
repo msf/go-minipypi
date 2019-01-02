@@ -1,0 +1,41 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.11.4
+    working_directory: /home/circleci/citymapper/go-minipypi
+    environment:
+      TEST_RESULTS: &test_results /tmp/test-results
+      OUTPUT_BIN: &output_bin /tmp/bin
+
+    steps:
+      - checkout
+      - run: mkdir -p "$TEST_RESULTS"
+      - run: mkdir -p "$OUTPUT_BIN"
+
+      - run: go get github.com/jstemmer/go-junit-report
+
+      - run:
+          name: Run unit tests
+          command: |
+            trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
+            go test -v 2>&1 | tee ${TEST_RESULTS}/go-test.out
+
+      - run: go build
+
+      - run:
+          name: Create build artifact
+          command: |
+            gzip go-minipypi
+            mv -f go-minipypi.gz "$OUTPUT_BIN/go-minipypi-`uname -s`-`uname -m`.gz"
+
+      - store_artifacts:
+          path: *test_results
+          destination: raw-test-output
+
+      - store_test_results:
+          path: *test_results
+
+      - store_artifacts:
+          path: *output_bin
+          destination: bin
