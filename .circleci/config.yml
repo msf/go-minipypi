@@ -17,7 +17,7 @@ jobs:
           name: Run unit tests
           command: gotestsum --junitfile ${TEST_RESULTS}/go-test-report.xml
 
-      - run: go build
+      - run: go build -ldflags "-X main.date=`date -u +%Y-%m-%dT%H:%M:%SZ` -X main.commit=${CIRCLE_SHA1}"
 
       - run:
           name: Create build artifact
