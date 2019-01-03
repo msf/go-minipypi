@@ -13,13 +13,9 @@ jobs:
       - run: mkdir -p "$TEST_RESULTS"
       - run: mkdir -p "$OUTPUT_BIN"
 
-      - run: go get github.com/jstemmer/go-junit-report
-
       - run:
           name: Run unit tests
-          command: |
-            trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
-            go test -v 2>&1 | tee ${TEST_RESULTS}/go-test.out
+          command: gotestsum --junitfile ${TEST_RESULTS}/go-test-report.xml
 
       - run: go build
 
