@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,6 +16,12 @@ type Configs struct {
 	CacheConfigs CacheConfigs
 	S3configs    S3configs
 }
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func genConfig(filename string) {
 	cfg := &Configs{
@@ -38,6 +45,8 @@ func genConfig(filename string) {
 }
 
 func main() {
+	fmt.Printf("go-minipypi - %v, commit %v, built at %v\n", version, commit, date)
+
 	cfg := Configs{}
 
 	var configFile = flag.String("config", "config.yml", "config file")
