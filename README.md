@@ -1,44 +1,25 @@
 go-minipypi
 ===========
 
-Bare minimums implementation of a Pypi server that proxies all requests to an S3 bucket.
+A bare minimum implementation of a PyPI server that proxies all requests to an S3 bucket.
 
 This was implemented by looking what was required to get pip install commands such as this one working:
 > pip install -v  --no-index --find-links=http://localhost:8080/ -r requirements.txt
 
-it does the job.
+Installation
+------------
 
+1. Install [go 1.11](https://golang.org/dl/) or later.
 
-Instalation
------------
+2. Clone this repository to somewhere outside of your GOPATH.
 
-1. Install go:
+3. Build the code:
 
-	```
-	brew install go
-	```
-
-2. Setup your GOPATH env variable and pull the code:
-
-	```
-	go get github.com/citymapper/go-minipypi
-	```
-
-3. Install the requirements (if you haven't done so already)
-
-	```
-	go get github.com/aws/aws-sdk-go/aws
-	go get gopkg.in/yaml.v2
-	```
-
-4. Build the code:
-
-	```
-	cd $GOPATH/src/github.com/citymapper/go-minipypi
+	```sh
 	go build .
 	```
 
-5. Run it:
+4. Run it:
 
 	```
 	./go-minipypi
@@ -46,5 +27,29 @@ Instalation
 
 Notes:
 ------
-Its requires a config file, see config.yml.
-It requires a ini file that holds the AWS credentials. See aws_credentials.ini
+It requires a config file, see `config.yml`. Drop the `credentialsfile` parameter to use the [default AWS credentials chain](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
+
+Release
+-------
+
+go-minipypi uses [goreleaser](https://github.com/goreleaser/goreleaser) locally for releases.
+
+1. Install [goreleaser](https://goreleaser.com/install/)
+
+2. Ensure you're on a clean master, and tag the current commit for release -
+
+   ```sh
+   git tag -a "v0.4.0"
+   ```
+
+3. Do a dry-run of the release if necessary and check the artifacts in `dist/` -
+
+   ```sh
+   goreleaser --skip-publish
+   ```
+
+4. Using your GitHub token, complete the release -
+
+   ```sh
+   GITHUB_TOKEN=your_github_token_with_release_privileges goreleaser
+   ```

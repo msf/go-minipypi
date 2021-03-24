@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -20,9 +22,15 @@ type S3configs struct {
 // NewS3Fetcher is a S3 backed implementation of the FileFetcher interface.
 // it does the setup of the S3 service session state required to implement FileFetcher interface
 func NewS3Fetcher(cfg S3configs) FileFetcher {
-	svc := s3.New(session.New(
-		aws.NewConfig().WithRegion(cfg.Region).WithCredentials(
-			credentials.NewSharedCredentials(cfg.CredentialsFile, "default"))))
+	awsCfg := aws.NewConfig().WithRegion(cfg.Region)
+	if cfg.CredentialsFile != "" {
+		log.Printf("using AWS credentials from %s", cfg.CredentialsFile)
+		awsCfg = awsCfg.WithCredentials(credentials.NewSharedCredentials(cfg.CredentialsFile, "default"))
+	} else {
+		log.Print("no AWS credentials file specified, using the default credentials chain")
+	}
+
+	svc := s3.New(session.New(awsCfg))
 	cfg.s3svc = svc
 
 	return cfg
