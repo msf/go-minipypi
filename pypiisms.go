@@ -26,26 +26,22 @@ func handlePypiFileNames(key string) string {
 func handlePypiListDir(fetcher FileFetcher, path string) ([]ListDirEntry, error) {
 	prefix := strings.TrimPrefix(path, "/")  // remove initial /
 	prefix = strings.TrimSuffix(prefix, "/") // and last one
+	prefix = strings.Replace(prefix, "-", "_", -1)
+
 
 	if len(prefix) < 1 {
 		return nil, fmt.Errorf("expected a directory to list")
 	}
 
-	// case-insensitive search, search for X* + x*
-	lowerFiles, err := fetcher.ListDir(strings.ToLower(prefix))
+	files, err := fetcher.ListDir(prefix)
 	if err != nil {
-		return lowerFiles, err
-	}
-	upperFiles, err := fetcher.ListDir(strings.ToUpper(prefix))
-	if err != nil {
-		return upperFiles, err
+		return files, err
 	}
 
-	// now merge both and filter by normalized prefix comparison.
-	allFiles := append(lowerFiles, upperFiles...)
+	// now filter by normalized prefix comparison.
 	normalizedPrefix := normalizeFileName(prefix)
 	var results []ListDirEntry
-	for _, entry := range allFiles {
+	for _, entry := range files {
 		fileName := normalizeFileName(entry.Name)
 		if strings.HasPrefix(fileName, normalizedPrefix) {
 			results = append(results, entry)
