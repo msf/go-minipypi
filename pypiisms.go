@@ -32,12 +32,11 @@ func handlePypiListDir(fetcher FileFetcher, path string) ([]ListDirEntry, error)
 	}
 
 	// case-insensitive search, search for X* + x*
-	firstLetter := prefix[0:1]
-	lowerFiles, err := fetcher.ListDir(strings.ToLower(firstLetter))
+	lowerFiles, err := fetcher.ListDir(strings.ToLower(prefix))
 	if err != nil {
 		return lowerFiles, err
 	}
-	upperFiles, err := fetcher.ListDir(strings.ToUpper(firstLetter))
+	upperFiles, err := fetcher.ListDir(strings.ToUpper(prefix))
 	if err != nil {
 		return upperFiles, err
 	}
