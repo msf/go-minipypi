@@ -76,6 +76,7 @@ func (ctx WebServerConfigs) handleListDir(w http.ResponseWriter, path string) {
 	fileList, err := handlePypiListDir(ctx.fetcher, path)
 	if err != nil {
 		desc := fmt.Sprintf("\"LISTDIR %v\" 400 - err: %v", path, err)
+		log.Println(desc)
 		http.Error(w, desc, http.StatusBadRequest)
 		return
 	}

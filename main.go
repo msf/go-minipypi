@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -15,6 +16,12 @@ type Configs struct {
 	CacheConfigs CacheConfigs
 	S3configs    S3configs
 }
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func genConfig(filename string) {
 	cfg := &Configs{
@@ -38,6 +45,8 @@ func genConfig(filename string) {
 }
 
 func main() {
+	fmt.Printf("go-minipypi - %v, commit %v, built at %v\n", version, commit, date)
+
 	cfg := Configs{}
 
 	var configFile = flag.String("config", "config.yml", "config file")
@@ -72,7 +81,6 @@ func isValidConfig(config Configs) bool {
 	valid = valid && config.WebConfigs.Port > 0
 	valid = valid && config.WebConfigs.Port < 65535
 	valid = valid && len(config.S3configs.BucketName) > 0
-	valid = valid && len(config.S3configs.CredentialsFile) > 0
 	valid = valid && len(config.S3configs.Region) > 0
 	return valid
 }
